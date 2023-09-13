@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nodeport
+  name: nodeport
+  namespace: ""
+spec:
+  ports:
+  - name: http
+    nodePort: 31333
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    run: webhost
+  type: NodePort
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: webhost
+  name: webpod1
+  namespace: ""
+spec:
+  volumes:
+    - name: pvol1
+      persistentVolumeClaim:
+        claimName: pvclm1
+  containers:
+  - image: nginx
+    name: webcon1
+    ports:
+    - containerPort: 80
+      name: "http-server"
+    volumeMounts:
+        - mountPath: "/usr/share/nginx/html"
+          name: pvol1
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}

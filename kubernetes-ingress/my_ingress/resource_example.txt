@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    ingress.kubernetes.io/rewrite-target: /
+  name: test
+spec:
+  ingressClassName: cluster-wide-ingress
+  rules:
+  - host: httpd.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: httpd
+            port:
+              number: 80
+              number: 443
+        path: /
+        pathType: Exact
+status:
+  loadBalancer: {}

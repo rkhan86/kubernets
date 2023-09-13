@@ -1,0 +1,27 @@
+#matelLB hostname configuration
+192.168.50.11	nginx.example.com
+192.168.50.11	httpd.example.com
+
+
+INGRESS_EXTERNAL_IP=`kubectl get svc --namespace=ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}'`
+
+
+
+
+
+ 
+
+
+
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/cloud/deploy.yaml
+
+kubectl create deployment nginx --image=nginx --port=80 --replicas 5 --dry-run=client -o yaml >> nginx_deployment.yaml
+ kubectl expose deployment nginx --labels app=nginx --dry-run=client -o yaml >> nginx_clusterIP.yaml
+
+
+kubectl create ingress nginx --class=nginx --rule nginx.example.com/=nginx:80
+
+kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission
+
+ks get pods -o wide
+kubectl exec -it nginx-55f598f8d-5tfxn /bin/sh

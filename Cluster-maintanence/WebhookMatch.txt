@@ -1,0 +1,7 @@
+/etc/kubernetes/mainfist
+
+- --feature-gates=AdmissionWebhookMatchConditions=true
+
+
+
+

@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  name: cka
+spec: {}
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nodeport
+  name: nodeport
+  namespace: cka
+spec:
+  ports:
+  - name: http
+    nodePort: 31333
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    run: webhost
+  type: NodePort
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: webhost
+  name: webpod1
+  namespace: cka
+spec:
+  containers:
+  - image: nginx
+    name: webcon1
+    ports:
+    - containerPort: 80
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: webhost
+  name: webpod2
+  namespace: cka
+spec:
+  containers:
+  - image: httpd
+    name: webcon2
+    ports:
+    - containerPort: 80
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}

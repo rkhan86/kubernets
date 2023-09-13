@@ -1,0 +1,36 @@
+ks delete ingresses.networking.k8s.io cheddar
+ks get ing -n <namespave> >>>>>> for resource
+kubectl describe ing <ingress-resource-name> -n <namespace-of-ingress-resource>
+
+kubectl get pods -n <namespace-of-ingress-controller>
+kubectl logs -n <namespace> <controller-name>
+
+kubectl exec -it -n <namespace-of-ingress-controller> <controller-name> -- cat /etc/nginx/nginx.conf
+
+kubectl get pods --namespace=nginx-ingress
+
+clr
+
+ks create ingress test --class cluster-wide-ingress --rule httpd.example.com/=httpd:80 --annotation  ingress.kubernetes.io/rewrite-target=/ --dry-run=client -o yaml 
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    ingress.kubernetes.io/rewrite-target: /
+  name: test
+spec:
+  ingressClassName: cluster-wide-ingress
+  rules:
+  - host: httpd.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: httpd
+            port:
+              number: 80
+              number: 443
+        path: /
+        pathType: Exact
+status:
+  loadBalancer: {}

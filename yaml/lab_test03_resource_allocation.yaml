@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  name: cka
+spec: {}
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nodeport
+  name: nodeport
+  namespace: cka
+spec:
+  ports:
+  - name: http
+    nodePort: 31333
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    run: webhost
+  type: NodePort
+status:
+  loadBalancer: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: dep1
+  name: dep1
+  namespace: cka
+spec:
+  replicas: 3
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      run: webhost
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        run: webhost
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "20m"
+            memory: "20Mi"
+          limits:
+            cpu: "40m"
+            memory: "40Mi"
+status: {}

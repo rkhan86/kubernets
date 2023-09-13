@@ -1,0 +1,47 @@
+global
+    log         stdout format raw local0
+    stats socket /var/lib/haproxy/stats
+    ssl-default-bind-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
+    ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+    ssl-default-bind-options ssl-min-ver TLSv1.2 no-tls-tickets
+
+defaults
+    mode                    http
+    log                     global
+    option                  httplog
+    option                  dontlognull
+    option http-server-close
+    option forwardfor       except 127.0.0.0/8
+    option                  redispatch
+    retries                 3
+    timeout http-request    10s
+    timeout queue           1m
+    timeout connect         10s
+    timeout client          1m
+    timeout server          1m
+    timeout http-keep-alive 10s
+    timeout check           10s
+    maxconn                 3000
+    
+
+frontend main
+    bind	*:80
+    bind 	*:443 ssl  crt  /usr/local/etc/haproxy/cert.pem
+    http-request redirect scheme https code 301 if !{ ssl_fc }
+    default_backend web01
+    http-request capture req.hdr(Host) len 64
+    http-request capture req.hdr(Referer) len 64
+    http-request capture req.hdr(Content-Lenght) len 64
+    http-request capture req.hdr(User-Agent) len 64
+
+backend web01
+    server  backend01   backend.kifarunix-demo.com:443 check ssl verify none
+
+listen stats
+    bind  *:8888 ssl  crt  /usr/local/etc/haproxy/cert.pem
+    stats enable                      
+    stats hide-version              
+    stats refresh 30s               
+    stats show-node                 
+    stats auth rproxy:P@ssw0rd     
+    stats uri /stats

@@ -1,0 +1,76 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: etcd-backup
+  namespace: kube-system
+spec:
+  schedule: "*/2 * * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  concurrencyPolicy: Allow
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: etcd-backup
+            image: rzkhan/etcd-backup:v3.4.27
+            imagePullPolicy: IfNotPresent
+            resources: {}
+            env:
+            - name: ETCDCTL_API
+              value: "3"
+            - name: ETCDCTL_ENDPOINTS
+              value: "https://127.0.0.1:2379"
+            - name: ETCDCTL_CACERT
+              value: "/etc/kubernetes/pki/etcd/ca.crt"
+            - name: ETCDCTL_CERT
+              value: "/etc/kubernetes/pki/etcd/healthcheck-client.crt"
+            - name: ETCDCTL_KEY
+              value: "/etc/kubernetes/pki/etcd/healthcheck-client.key"
+            command: ["/bin/bash","-c"]
+            args: ["etcdctl snapshot save /opt/etcd-backup/etcd-snapshot-$(date +%Y-%m-%dT%H:%M).db"]
+            volumeMounts:
+            - mountPath: /etc/kubernetes/pki/etcd
+              name: etcd-certs
+              readOnly: true
+            - mountPath: /opt/etcd-backup
+              name: etcd-backup
+            - mountPath: /etc/localtime
+              name: local-timezone
+          - name: backup-purge
+            image: busybox:1.36.1
+            imagePullPolicy: IfNotPresent
+            resources: {}
+            args: 
+            - -c
+            - find /opt/etcd-backup -type f -mtime +30 -name '*.db' -exec rm -fr {} \;
+            # - find /opt/etcd-backup -type f -mtime +30 -name '*.db' -exec rm -- '{}' \;
+            command: 
+            - /bin/bash
+            volumeMounts:
+            - mountPath: /opt/etcd-backup
+              name: etcd-backup
+          restartPolicy: OnFailure
+          dnsPolicy: ClusterFirst
+          hostNetwork: true
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: ""
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+          tolerations:
+          - effect: NoSchedule
+            operator: Exists
+          volumes:
+          - name: etcd-certs
+            hostPath:
+              path: /etc/kubernetes/pki/etcd
+              type: Directory
+          - name: etcd-backup
+            hostPath:
+              path: /opt/etcd-backup
+              type: DirectoryOrCreate
+          - name: local-timezone
+            hostPath:
+              path: /usr/share/zoneinfo/Asia/Dhaka

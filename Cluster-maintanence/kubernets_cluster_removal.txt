@@ -1,0 +1,79 @@
+#!/bin/sh
+# Kube Admin Reset
+kubeadm reset
+
+preflight              Run reset pre-flight checks
+update-cluster-status  Remove this node from the ClusterStatus object.
+remove-etcd-member     Remove a local etcd member.
+cleanup-node           Run cleanup node.
+
+# Remove all packages related to Kubernetes
+apt remove -y kubeadm kubectl kubelet kubernetes-cni 
+apt purge -y kube*
+
+# Remove docker containers/ images ( optional if using docker)
+docker image prune -a
+systemctl restart docker
+apt purge -y docker-engine docker docker.io docker-ce docker-ce-cli containerd containerd.io runc --allow-change-held-packages
+
+# Remove parts
+
+apt autoremove -y
+
+# Remove all folder associated to kubernetes, etcd, and docker
+rm -rf ~/.kube
+rm -rf /etc/cni /etc/kubernetes /var/lib/dockershim /var/lib/etcd /var/lib/kubelet /var/lib/etcd2/ /var/run/kubernetes ~/.kube/* 
+rm -rf /var/lib/docker /etc/docker /var/run/docker.sock
+rm -f /etc/apparmor.d/docker /etc/systemd/system/etcd* 
+
+# Delete docker group (optional)
+groupdel docker
+
+# Clear the iptables
+iptables -F && iptables -X
+iptables -t nat -F && iptables -t nat -X
+iptables -t raw -F && iptables -t raw -X
+iptables -t mangle -F && iptables -t mangle -X
+
+---------------------------------------------------------------------------
+
+kubectl drain <node name> --delete-local-data --force --ignore-daemonsets
+kubectl delete node <node name>
+-------------------------------------------------------------------------------
+
+sudo kubeadm reset
+
+sudo apt purge kubectl kubeadm kubelet kubernetes-cni -y
+sudo apt autoremove
+sudo rm -fr /etc/kubernetes/; sudo rm -fr ~/.kube/; sudo rm -fr /var/lib/etcd; sudo rm -rf /var/lib/cni/
+
+sudo systemctl daemon-reload
+
+sudo iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
+
+# remove all running docker containers
+docker rm -f `docker ps -a | grep "k8s_" | awk '{print $1}'`
+-----------------------------------------------------------------------------------
+
+for every node do this:
+kubectl drain <node name> --delete-local-data --force --ignore-daemonsets
+kubectl delete node <node name>
+
+on every node:
+	kubeadm reset
+
+on master node:
+	kubeadm reset
+
+To completely uninstall kubernetes:
+
+# on debian base 
+sudo apt-get purge kubeadm kubectl kubelet kubernetes-cni kube* 
+#on centos base
+sudo yum remove kubeadm kubectl kubelet kubernetes-cni kube*# on debian base
+sudo apt-get autoremove
+#on centos base
+sudo yum autoremove
+ 
+sudo rm -rf ~/.kube
+
