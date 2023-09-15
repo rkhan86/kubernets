@@ -1,4 +1,4 @@
-# ETCD Backup process
+# ETCD Backup & Restore process
 
 **Step1: Set enviroment variable**
 
