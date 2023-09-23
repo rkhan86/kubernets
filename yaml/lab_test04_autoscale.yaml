@@ -1,7 +1,6 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  creationTimestamp: null
   name: cka
 spec: {}
 status: {}
@@ -9,7 +8,6 @@ status: {}
 apiVersion: v1
 kind: Service
 metadata:
-  creationTimestamp: null
   labels:
     app: nodeport
   name: nodeport
@@ -30,7 +28,6 @@ status:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   labels:
     app: dep1
   name: dep1
@@ -68,7 +65,6 @@ status: {}
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
-  creationTimestamp: null
   name: dep1
 spec:
   maxReplicas: 5

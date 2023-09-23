@@ -1,4 +1,10 @@
-/etc/kubernetes/mainfist
+/etc/kubernetes/mainfist/kube-apiserver.yaml
+
+
+- --authorization-mode=Node,RBAC,Webhook 
+
+
+
 
 - --feature-gates=AdmissionWebhookMatchConditions=true
 

@@ -24,3 +24,8 @@ crictl pods
 crictl stopp <pod_ID> && crictl rmp <pod_ID>
 
 ```
+```sh
+#To view the the information of a cirtificate 
+openssl x509 -in /etc/kubernetes/pki/apiserver.crt -text -noout 
+openssl x509 -in /etc/kubernetes/pki/apiserver.crt -text -noout | grep -i not
+```

@@ -246,6 +246,14 @@ vim custom-resources.yaml <<<<<< match CIDR wirh --pod-network-cidr for pods if 
 kubectl apply -f custom-resources.yaml
 watch kubectl get pods -n calico-system
 ```
+**<u>Install calicoctl as a kubectl plugin on a single host</u>**
+```sh
+curl -L https://github.com/projectcalico/calico/releases/download/v3.25.0/calicoctl-linux-amd64 -o kubectl-calico
+mv kubectl-calico /usr/local/sbin/
+chmod 755 /usr/local/sbin/kubectl-calico
+kubectl calico -h
+kubectl calico node status
+```
 **_Node's Cluster IP from Calico_**
 ```sh
 hostname -I

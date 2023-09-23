@@ -13,7 +13,7 @@
 
 - Create Dockerfile with a following content (see below). Notice “ARG” parameter, this helps us to add version control our builtin tool.
 
-```yaml
+```Dockerfile
 FROM alpine:latest
 
 ARG ETCD_VERSION=v3.4.27
@@ -32,19 +32,27 @@ RUN wget https://github.com/etcd-io/etcd/releases/download/${ETCD_VERSION}/etcd-
 
 ENTRYPOINT ["/bin/bash"]
 ```
+
 - Export “ETCD_VERSION” variable, which will be used in next step. Changing tool version can be simply done by changing variable value.
+
 ```sh
 export ETCD_VERSION=v3.4.13
 ```
+
 - Below command will build our backup image.
+
 ```sh
 docker build --build-arg=$ETCD_VERSION -t etcd-backup:$ETCD_VERSION .
 ```
+
 - Verify that built image exists!
+
 ```sh
 docker images | grep -i "etcd-backup"
 ```
+
 **Stage:2 Backup Etcd Datastore Using Kubernetes Cronjob**
+
 - Now that we have built backup container, lets create scheduled backup cronjob. For demonstration purpose we use “default” namespace.
 
 - Create file named etcd-backup-cronjob.yaml and paste below content. Notice last line, where we mount host timezone into our container.
@@ -127,11 +135,15 @@ spec:
             hostPath:
               path: /usr/share/zoneinfo/Asia/Dhaka
 ```
+
 - Deploy cronjob to cluster.
+
 ```sh
 kubectl apply -f etcd-backup-cronjob.yaml
 ```
+
 - Verify that cronjob exits in cluster with below command.
+
 ```sh
 kubectl get cronjobs -n kube-system
 ```
