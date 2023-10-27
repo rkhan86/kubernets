@@ -1,0 +1,46 @@
+pipeline {
+	agent any
+	environment { 
+			PATH="/opt/maven/bin:$PATH"
+			NAME = "resource-bucket"
+			WORKSPACE= "/home/jenkins/workspace/resourse-service-test"
+			WP="/home/jenkins/workspace/resourse-service-test/resource-bucket-web/target"
+			}
+	
+	stages {
+		stage('Git Pull') {
+		    steps {
+			    git branch: 'test', credentialsId: 'Git_User_Jenkins', url: 'https://gitlab.com/egen2021/resource-bucket-service.git'
+		    }
+		}
+	    stage('Build Project') {
+			steps {
+				sh 'cd $WORKSPACE && mvn -f ./pom.xml clean install -Ptest'
+				sh 'cd $WP && mv resource-bucket-web-1.0.war resource-bucket.war'
+			}
+		}
+        stage('Get ssh Access') {
+            environment { 
+		        WS= "/opt/tomcat9/webapps"
+	        }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 rm -fr $WS/resource-bucket $WS/resource-bucket.war'''
+    		    }
+    	    }
+        }
+    
+        stage('Deploy app') {
+            environment { 
+    		    WS= "/opt/tomcat9/webapps"
+    	    }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''scp -o StrictHostKeyChecking=no -P 2252 $WP/resource-bucket.war egen@116.68.206.152:$WS/
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 chown egen:egen $WS/resource-bucket.war
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 chmod 775 $WS/resource-bucket.war'''
+    		    }
+    	    }
+        }
+	}
+}

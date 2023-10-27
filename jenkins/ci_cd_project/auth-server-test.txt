@@ -1,0 +1,48 @@
+pipeline {
+	agent any
+	environment { 
+			PATH="/opt/maven/bin:$PATH"
+			NAME = "auth-server"
+			WORKSPACE= "/home/jenkins/workspace/auth-server-test"
+			WP="/home/jenkins/workspace/auth-server_test/target"
+			}
+	
+	stages {
+		stage('Git Pull') {
+		    steps {
+			    git branch: 'dev', credentialsId: 'Git_User_Jenkins', url: 'https://gitlab.com/egen2021/auth-server.git'
+		    }
+		}
+	    stage('Build Project') {
+			steps {
+				sh 'cd $WORKSPACE && mvn -f ./pom.xml clean install -Ptest'
+				sh 'cd target && mv auth-server-1.0.war auth-server.war'
+			}
+		}
+        stage('Get ssh Access') {
+            environment { 
+		        WS= "/opt/tomcat9/webapps"
+	        }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152  /opt/tomcat9/bin/shutdown.sh
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 rm -fr $WS/auth-server $WS/auth-server.war'''
+    		    }
+    	    }
+        }
+    
+        stage('Deploy app') {
+            environment { 
+    		    WS= "/opt/tomcat9/webapps"
+    	    }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''scp -o StrictHostKeyChecking=no -P 2252 $WORKSPACE/target/auth-server.war egen@116.68.206.152:$WS/
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 chown egen:egen $WS/auth-server.war
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 chmod 775 $WS/auth-server.war
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 /opt/tomcat9/bin/startup.sh'''
+    		    }
+    	    }
+        }
+	}
+}

@@ -1,0 +1,84 @@
+pipeline {
+	agent any
+	tools {
+        maven 'Maven_3.6.3' 
+        jdk 'jdk1.8.0_291'
+        gradle 'Gradle_6.0.1'
+    }
+	environment { 
+		//	PATH="/opt/gradle/bin:$PATH"
+			WORKSPACE= "/home/jenkins/workspace/BGB_QA_Deployment/source"
+			TEST_WK="/home/jenkins/workspace/BGB_QA_Deployment/source/service/hims-service/src/test/java/com/egeneration/hims/service"
+			}
+	
+	stages {
+		stage('Preparation') {
+		    steps {
+			    git branch: 'dev.1.0.1', credentialsId: 'Git_User_Jenkins', url: 'https://gitlab.com/healtix.project/bg-hmis.git'
+				sh 'cd $WORKSPACE/client/hims-client && rm -fr hmis-client hmis-client.zip'
+			}
+		}
+		
+		stage('Build_Client') {
+			environment { 
+					NODE_OPTIONS="--max-old-space-size=4096"
+			}
+			steps {
+				sh 'cd $WORKSPACE/client/hims-client && npm install && ng build --prod --base-href /hmis-client/ && mv dist hmis-client && zip -r hmis-client.zip hmis-client/'
+			}
+		}
+		stage('Build_Gateway') {
+			steps {
+				sh 'cd $WORKSPACE/service/hims-api-gateway && gradle clean build'
+			}
+		}
+		stage('Build_Service') {
+			steps {
+				sh 'rm -fr $TEST_WK/HimsServiceApplicationTests.java && cp /home/cmsd_vm/HimsServiceApplicationTests.java $TEST_WK && cd $WORKSPACE/service/hims-service && gradle clean build'
+			}
+		}
+	    stage('Deployed_222') {
+	        environment { 
+					WS= "/bgb/test_server/apache-tomcat-9.0.30/webapps"
+			}
+			steps {
+				sshagent(['SSH_USER_222']) {
+					sh '''ssh -o StrictHostKeyChecking=no root@116.68.194.222 /bgb/test_server/apache-tomcat-9.0.30/bin/catalina.sh stop
+                    ssh -o StrictHostKeyChecking=no root@116.68.194.222 rm -fr $WS/apigateway $WS/apigateway.war $WS/hims-service $WS/hims-service.war $WS/hmis-client $WS/hmis-client.zipzip
+                    scp -o StrictHostKeyChecking=no $WORKSPACE/client/hims-client/hmis-client.zip root@116.68.194.222:$WS/
+                    scp -o StrictHostKeyChecking=no $WORKSPACE/service/hims-api-gateway/build/libs/apigateway.war root@116.68.194.222:$WS/
+                    scp -o StrictHostKeyChecking=no $WORKSPACE/service/hims-service/build/libs/hims-service.war root@116.68.194.222:$WS/
+                    ssh -o StrictHostKeyChecking=no root@116.68.194.222 unzip $WS/hmis-client.zip -d $WS/
+                    ssh -o StrictHostKeyChecking=no root@116.68.194.222 /bgb/test_server/apache-tomcat-9.0.30/bin/catalina.sh start'''
+				}
+			}
+		}			
+	}
+	post {
+       failure {
+                emailext attachLog: true, body:
+            """<p>EXECUTED: Job <b>\'${env.JOB_NAME}:${env.BUILD_NUMBER}\'</b></p><p>View console output at 
+            "<a href="${env.BUILD_URL}">${env.JOB_NAME}:${env.BUILD_NUMBER}</a>"</p> 
+                <p><i>(Build log is attached.)</i></p>""", 
+                compressLog: true,
+                recipientProviders: [[$class: 'DevelopersRecipientProvider'], 
+                [$class: 'RequesterRecipientProvider']],
+                    replyTo: 'do-not-reply@company.com', 
+                    subject: "Status: ${currentBuild.result?:'Failed'} - Job \'${env.JOB_NAME}:${env.BUILD_NUMBER}\'",
+                     to: 'jenkins@egeneration.co faria.sultana@egeneration.co mohiminul.islam@egeneration.co rashed.zaman@egeneration.co mohammad.shahajada@egeneration.co'
+        }
+        success{
+            emailext attachLog: true, body:
+            """<p>EXECUTED: Job <b>\'${env.JOB_NAME}:${env.BUILD_NUMBER}\'</b></p><p>View console output at 
+            "<a href="${env.BUILD_URL}">${env.JOB_NAME}:${env.BUILD_NUMBER}</a>"</p> 
+                <p><i>(Build log is attached.)</i></p>""", 
+                compressLog: true,
+                recipientProviders: [[$class: 'DevelopersRecipientProvider'], 
+                [$class: 'RequesterRecipientProvider']],
+                    replyTo: 'do-not-reply@company.com', 
+                    subject: "Status: ${currentBuild.result?:'Success'} - Job \'${env.JOB_NAME}:${env.BUILD_NUMBER}\'",
+                     to: 'jenkins@egeneration.co faria.sultana@egeneration.co mohiminul.islam@egeneration.co rashed.zaman@egeneration.co mohammad.shahajada@egeneration.co'
+            
+        }
+    }
+}

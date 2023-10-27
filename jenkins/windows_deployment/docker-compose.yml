@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+  jenkins:    
+    build: 
+      context: ./image          # defines either a path to a directory containing a Dockerfile, or a url to a git repository
+      dockerfile: dockerfile    # allows to set an alternate Dockerfile
+      tags:
+        - rzkhan/jenkins:lts
+      shm_size: '4gb'
+    container_name: jenkins
+    hostname: jenkinssrv
+    privileged: true
+    user: root
+    ports:
+      - 8080:8080
+      - 50000:50000    
+    volumes:
+      - /home/jenkins_home:/var/jenkins_home        # Define jenkins home
+      - /var/run/docker.sock:/var/run/docker.sock   # Define docker command support from host
+      - /usr/bin/docker:/usr/bin/docker             # Define docker command support from host

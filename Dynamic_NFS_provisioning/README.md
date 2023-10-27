@@ -3,7 +3,8 @@
 **NFS subdir external provisioner** is an automatic provisioner that use your _existing and already configured_ NFS server to support dynamic provisioning of Kubernetes Persistent Volumes via Persistent Volume Claims. Persistent volumes are provisioned as `${namespace}-${pvcName}-${pvName}`.
 
 Note: This repository is migrated from https://github.com/kubernetes-incubator/external-storage/tree/master/nfs-client. As part of the migration:
-- The container image name and repository has changed to `gcr.io/k8s-staging-sig-storage` and `nfs-subdir-external-provisioner` respectively. 
+
+- The container image name and repository has changed to `gcr.io/k8s-staging-sig-storage` and `nfs-subdir-external-provisioner` respectively.
 - To maintain backward compatibility with earlier deployment files, the naming of NFS Client Provisioner is retained as `nfs-client-provisioner` in the deployment YAMLs.
 - One of the pending areas for development on this repository is to add automated e2e tests. If you would like to contribute, please raise an issue or reach us on the Kubernetes slack #sig-storage channel.
 
@@ -116,11 +117,11 @@ To disable leader election, define an env variable named ENABLE_LEADER_ELECTION 
 
 **_Parameters:_**
 
-| Name            | Description                                                                                                                                                                  |                             Default                              |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------: |
-| onDelete        | If it exists and has a delete value, delete the directory, if it exists and has a retain value, save the directory.                                                          | will be archived with name on the share: `archived-<volume.Name>` |
-| archiveOnDelete | If it exists and has a false value, delete the directory. if `onDelete` exists, `archiveOnDelete` will be ignored.                                                           | will be archived with name on the share: `archived-<volume.Name>` |
-| pathPattern     | Specifies a template for creating a directory path via PVC metadata's such as labels, annotations, name or namespace. To specify metadata use `${.PVC.<metadata>}`. Example: If folder should be named like `<pvc-namespace>-<pvc-name>`, use `${.PVC.namespace}-${.PVC.name}` as pathPattern. |                               n/a                                |
+| Name            | Description                                                                                                                                                                                                                                                                                    |                              Default                              |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------: |
+| onDelete        | If it exists and has a delete value, delete the directory, if it exists and has a retain value, save the directory.                                                                                                                                                                            | will be archived with name on the share: `archived-<volume.Name>` |
+| archiveOnDelete | If it exists and has a false value, delete the directory. if `onDelete` exists, `archiveOnDelete` will be ignored.                                                                                                                                                                             | will be archived with name on the share: `archived-<volume.Name>` |
+| pathPattern     | Specifies a template for creating a directory path via PVC metadata's such as labels, annotations, name or namespace. To specify metadata use `${.PVC.<metadata>}`. Example: If folder should be named like `<pvc-namespace>-<pvc-name>`, use `${.PVC.namespace}-${.PVC.name}` as pathPattern. |                                n/a                                |
 
 This is `deploy/class.yaml` which defines the NFS subdir external provisioner's Kubernetes Storage Class:
 
@@ -182,7 +183,7 @@ To build your own custom container image from this repository, you will have to 
 ```sh
 make build
 make container
-# `nfs-subdir-external-provisioner:latest` will be created. 
+# `nfs-subdir-external-provisioner:latest` will be created.
 # Note: This will build a single-arch image that matches the machine on which container is built.
 # To upload this to your custom registry, say `quay.io/myorg` and arch as amd64, you can use
 # docker tag nfs-subdir-external-provisioner:latest quay.io/myorg/nfs-subdir-external-provisioner-amd64:latest
@@ -194,17 +195,16 @@ make container
 In a forked repository you can use GitHub Actions pipeline defined in [.github/workflows/release.yml](.github/workflows/release.yml). The pipeline builds Docker images for `linux/amd64`, `linux/arm64`, and `linux/arm/v7` platforms and publishes them using a multi-arch manifest. The pipeline is triggered when you add a tag like `gh-v{major}.{minor}.{patch}` to your commit and push it to GitHub. The tag is used for generating Docker image tags: `latest`, `{major}`, `{major}:{minor}`, `{major}:{minor}:{patch}`.
 
 The pipeline adds several labels:
-* `org.opencontainers.image.title=${{ github.event.repository.name }}`
-* `org.opencontainers.image.description=${{ github.event.repository.description }}`
-* `org.opencontainers.image.url=${{ github.event.repository.html_url }}`
-* `org.opencontainers.image.source=${{ github.event.repository.clone_url }}`
-* `org.opencontainers.image.created=${{ steps.prep.outputs.created }}`
-* `org.opencontainers.image.revision=${{ github.sha }}`
-* `org.opencontainers.image.licenses=${{ github.event.repository.license.spdx_id }}`
+
+- `org.opencontainers.image.title=${{ github.event.repository.name }}`
+- `org.opencontainers.image.description=${{ github.event.repository.description }}`
+- `org.opencontainers.image.url=${{ github.event.repository.html_url }}`
+- `org.opencontainers.image.source=${{ github.event.repository.clone_url }}`
+- `org.opencontainers.image.created=${{ steps.prep.outputs.created }}`
+- `org.opencontainers.image.revision=${{ github.sha }}`
+- `org.opencontainers.image.licenses=${{ github.event.repository.license.spdx_id }}`
 
 **Important:**
-* The pipeline performs the docker login command using `REGISTRY_USERNAME` and `REGISTRY_TOKEN` secrets, which have to be provided.
-* You also need to provide the `DOCKER_IMAGE` secret specifying your Docker image name, e.g., `quay.io/[username]/nfs-subdir-external-provisioner`.
 
-
-
+- The pipeline performs the docker login command using `REGISTRY_USERNAME` and `REGISTRY_TOKEN` secrets, which have to be provided.
+- You also need to provide the `DOCKER_IMAGE` secret specifying your Docker image name, e.g., `quay.io/[username]/nfs-subdir-external-provisioner`.

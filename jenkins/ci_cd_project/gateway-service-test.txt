@@ -1,0 +1,47 @@
+pipeline {
+	agent any
+	environment { 
+			PATH="/opt/maven/bin:$PATH"
+			NAME = "gateway-service"
+			WORKSPACE= "/home/jenkins/workspace/gateway-service-test"
+			}
+	
+	stages {
+		stage('Git Pull') {
+		    steps {
+			    git branch: 'dev', credentialsId: 'Git_User_Jenkins', url: 'https://gitlab.com/egen2021/gateway-service.git'
+		    }
+		}
+	    stage('Build Project') {
+			steps {
+				sh 'cd $WORKSPACE && mvn -f ./pom.xml clean install -Ptest'
+				sh 'cd target && mv gateway-service-1.0.jar gateway-service.jar'
+			}
+		}
+        stage('Move to server') {
+            environment {
+		        WS= "/opt/applications"
+	        }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 cp $WS/gateway-service.jar $WS/backup/gateway-service-back.jar
+    				scp -o StrictHostKeyChecking=no -P 2252 $WORKSPACE/target/gateway-service.jar egen@116.68.206.152:$WS/'''
+    		    }
+    	    }
+        }
+    
+        stage('Deploy app') {
+            environment { 
+    		    WS= "/opt/applications"
+    	    }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 sudo systemctl stop gateway
+    				ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 sudo systemctl start gateway'''
+    				
+                    
+    		    }
+    	    }
+        }
+	}
+}

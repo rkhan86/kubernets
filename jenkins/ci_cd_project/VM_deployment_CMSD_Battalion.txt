@@ -1,0 +1,116 @@
+pipeline {
+	agent any
+	tools {
+        maven 'Maven_3.6.3' 
+        jdk 'jdk1.8.0_291'
+        gradle 'Gradle_6.0.1'
+    }
+	environment { 
+		//	PATH="/opt/gradle/bin:$PATH"
+			WORKSPACE= "/home/jenkins/workspace/VM_deployment_CMSD_Battalion/source"
+			CMSD_CONF= "/home/cmsd_vm"			
+			}
+	
+	stages {
+		stage('Preparation') {
+		    steps {
+			    git branch: 'dev.1.0.1', credentialsId: 'Git_User_Jenkins', url: 'https://gitlab.com/healtix.project/bg-hmis.git'
+				sh 'cd $WORKSPACE/client/hims-client && rm -fr battalion-client battalion-client.zip'
+			}
+		}
+		
+		stage('Build_CMSD_Client') {
+			environment { 
+					NODE_OPTIONS="--max-old-space-size=4096"
+					CONF= "$WORKSPACE/client/hims-client/src/environments"
+			}
+			steps {
+				sh 'cd $CONF/ && rm -fr environment.edsims.ts && cp $CMSD_CONF/cmsd/environment.edsims.ts $CONF/ && cd $WORKSPACE/client/hims-client && rm -fr cmsd-client cmsd-client.zip && npm install && ng build --configuration edsims --base-href /cmsd-client/ && mv dist cmsd-client && zip -r cmsd-client.zip cmsd-client/'
+			}
+		}
+		stage('Build_CMSD_Gateway') {
+			environment { 
+					GWAY= "/home/jenkins/workspace/VM_deployment_CMSD_Battalion/source/service/hims-api-gateway/src/main/resources"
+					GBUILD= "$WORKSPACE/service/hims-api-gateway/build/libs/"
+					TEST_GT= "/home/jenkins/workspace/VM_deployment_CMSD_Battalion/source/service/hims-api-gateway/src/test/java/com/egeneration/hims/apigateway"
+			}
+			steps {
+				sh 'rm -fr $TEST_GT/HimsApiGatewayApplicationTests.java && cp /home/cmsd_vm/gateway/HimsApiGatewayApplicationTests.java $TEST_GT && cd $GWAY && rm -fr application.properties && cp $CMSD_CONF/gateway/application.properties $GWAY/ && cd $WORKSPACE/service/hims-api-gateway && gradle clean build && cd $GBUILD && mv apigateway.war cmsd-apigateway.war'
+			}
+		}
+		stage('Build_CMSD_Service') {
+			environment { 
+					SERVICE = "/home/jenkins/workspace/VM_deployment_CMSD_Battalion/source/service/hims-service/src/main/resources"
+					SBUILD= "$WORKSPACE/service/hims-service/build/libs/"
+					TEST_WK= "/home/jenkins/workspace/VM_deployment_CMSD_Battalion/source/service/hims-service/src/test/java/com/egeneration/hims/service"
+			}
+			steps {
+				sh 'rm -fr $TEST_WK/HimsServiceApplicationTests.java && cp /home/cmsd_vm/HimsServiceApplicationTests.java $TEST_WK && cd $SERVICE && rm -fr application.properties && cp $CMSD_CONF/service/application.properties $SERVICE/ && cd $WORKSPACE/service/hims-service && gradle clean build && cd $SBUILD && mv hims-service.war cmsd-service.war'
+			}
+		}
+	    stage('Deployed_CMSD_VM') {
+	        environment { 
+					WS= "/bgb/test_cmsd_edsims/apache-tomcat-9.0.30/webapps"
+			}
+			steps {
+				sshagent(['SSH_USER_CMSDVM']) {
+					sh '''ssh -o StrictHostKeyChecking=no root@202.53.175.35 /bgb/test_cmsd_edsims/apache-tomcat-9.0.30/bin/shutdown.sh
+                    ssh -o StrictHostKeyChecking=no root@202.53.175.35 rm -fr $WS/cmsd-apigateway $WS/cmsd-apigateway.war $WS/cmsd-service $WS/cmsd-service.war $WS/cmsd-client $WS/cmsd-client.zip
+                    scp -o StrictHostKeyChecking=no $WORKSPACE/client/hims-client/cmsd-client.zip root@202.53.175.35:$WS/
+                    scp -o StrictHostKeyChecking=no $WORKSPACE/service/hims-api-gateway/build/libs/cmsd-apigateway.war root@202.53.175.35:$WS/
+                    scp -o StrictHostKeyChecking=no $WORKSPACE/service/hims-service/build/libs/cmsd-service.war root@202.53.175.35:$WS/
+                    ssh -o StrictHostKeyChecking=no root@202.53.175.35 unzip $WS/cmsd-client.zip -d $WS/
+                    ssh -o StrictHostKeyChecking=no root@202.53.175.35 /bgb/test_cmsd_edsims/apache-tomcat-9.0.30/bin/startup.sh'''
+				}
+			}
+		}
+		//stage('Build_Battalion_Client') {
+		//	environment { 
+		//			NODE_OPTIONS="--max-old-space-size=4096"
+		//			BCONF= "$WORKSPACE/client/hims-client/src/environments"
+		//	}
+		//	steps {
+		//		sh 'cd $BCONF/ && rm -fr environment.battalion.ts && cp $CMSD_CONF/battalion/environment.battalion.ts $BCONF/ && cd $WORKSPACE/client/hims-client && rm -fr cmsd-client cmsd-client.zip && npm install && ng build --configuration battalion --base-href /battalion-client/ && mv dist battalion-client && zip -r battalion-client.zip battalion-client/'
+		//	}
+		//}
+		//stage('Deployed_MIDDLEWARE_VM') {
+	    //    environment { 
+		//			WS= "/bgb/test_middleware/apache-tomcat-9.0.30/webapps"
+		//	}
+		//	steps {
+		//		sshagent(['SSH_USER_MIDDLEWAREVM']) {
+		//			sh '''ssh -o StrictHostKeyChecking=no root@202.53.175.36 rm -fr $WS/battalion-client.zip $WS/battalion-client
+        //            scp -o StrictHostKeyChecking=no $WORKSPACE/client/hims-client/battalion-client.zip root@202.53.175.36:$WS/
+        //         	ssh -o StrictHostKeyChecking=no root@202.53.175.36 unzip $WS/battalion-client.zip -d $WS/'''
+		//		}
+		//	}
+		//}
+	}
+	post {
+       failure {
+                emailext attachLog: true, body:
+            """<p>EXECUTED: Job <b>\'${env.JOB_NAME}:${env.BUILD_NUMBER}\'</b></p><p>View console output at 
+            "<a href="${env.BUILD_URL}">${env.JOB_NAME}:${env.BUILD_NUMBER}</a>"</p> 
+                <p><i>(Build log is attached.)</i></p>""", 
+                compressLog: true,
+                recipientProviders: [[$class: 'DevelopersRecipientProvider'], 
+                [$class: 'RequesterRecipientProvider']],
+                    replyTo: 'do-not-reply@company.com', 
+                    subject: "VM_35_36_Deployment_Status: ${currentBuild.result?:'Failed'} - Job \'${env.JOB_NAME}:${env.BUILD_NUMBER}\'",
+                     to: 'jenkins@egeneration.co aksadur.rahman@egeneration.co shohana.khondoker@egeneration.co faria.sultana@egeneration.co'
+        }
+        success{
+            emailext attachLog: true, body:
+            """<p>EXECUTED: Job <b>\'${env.JOB_NAME}:${env.BUILD_NUMBER}\'</b></p><p>View console output at 
+            "<a href="${env.BUILD_URL}">${env.JOB_NAME}:${env.BUILD_NUMBER}</a>"</p> 
+                <p><i>(Build log is attached.)</i></p>""", 
+                compressLog: true,
+                recipientProviders: [[$class: 'DevelopersRecipientProvider'], 
+                [$class: 'RequesterRecipientProvider']],
+                    replyTo: 'do-not-reply@company.com', 
+                    subject: "VM_35_36_Deployment_Status: ${currentBuild.result?:'Success'} - Job \'${env.JOB_NAME}:${env.BUILD_NUMBER}\'",
+                     to: 'jenkins@egeneration.co aksadur.rahman@egeneration.co shohana.khondoker@egeneration.co faria.sultana@egeneration.co'
+            
+        }
+    }
+}

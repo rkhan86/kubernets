@@ -1,0 +1,38 @@
+pipeline {
+	agent any
+	environment { 
+			PATH="/opt/gradle/bin:$PATH"
+			WORKSPACE= "/home/jenkins/workspace/somc-hsms-portal"
+			}
+	
+	stages {
+		stage('Git Pull') {
+		    steps {
+			    git branch: 'test', credentialsId: 'Git_User_Jenkins', url: 'https://gitlab.com/shofiq_egeneration/somch-portal.git'
+			    sh 'cd $WORKSPACE/ && rm -fr hsms-portal hsms-portal.zip'
+		    }
+		}
+		stage('Build app') {
+			environment { 
+					NODE_OPTIONS="--max-old-space-size=4096"
+			}
+			steps {
+				sh 'cd $WORKSPACE && npm install && ng build --prod && rm -rf hsms-portal hsms-portal.zip && mv dist hsms-portal && zip -r hsms-portal.zip hsms-portal/'
+			}
+		}
+		 stage('Deploy app') {
+	        environment { 
+					WS= "/var/www"
+			}
+			steps {
+				sshagent(['SSH_USER_152']) {
+					sh '''echo ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 sudo rm -rf hsms-portal
+                    scp -o StrictHostKeyChecking=no -P 2252 $WORKSPACE/hsms-portal.zip egen@116.68.206.152:$WS/
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 sudo unzip -o $WS/hsms-portal.zip -d $WS/
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 sudo chown -R nginx:nginx $WS/hsms-portal
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 sudo systemctl restart nginx'''
+				}
+			}
+		}		
+	}
+}

@@ -1,0 +1,46 @@
+pipeline {
+	agent any
+	environment { 
+			PATH="/opt/maven/bin:$PATH"
+			NAME = "opd-web"
+			WORKSPACE= "/home/jenkins/workspace/opd-service-test"
+			WP="/home/jenkins/workspace/opd-service-test/opd-web/target"
+			}
+	
+	stages {
+		stage('Git Pull') {
+		    steps {
+			    git branch: 'test', credentialsId: 'Git_User_Jenkins', url: 'https://gitlab.com/egen2021/opd-service.git'
+		    }
+		}
+	    stage('Build Project') {
+			steps {
+				sh 'cd $WORKSPACE && mvn -f ./pom.xml clean install -Ptest -pl opd-web -am'
+				sh 'cd $WP && mv opd-web-1.0.war opd-service.war'
+			}
+		}
+        stage('Get ssh Access') {
+            environment { 
+		        WS= "/opt/tomcat9/webapps"
+	        }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 rm -fr $WS/opd-service $WS/opd-service.war'''
+    		    }
+    	    }
+        }
+    
+        stage('Deploy app') {
+            environment { 
+    		    WS= "/opt/tomcat9/webapps"
+    	    }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''scp -o StrictHostKeyChecking=no -P 2252 $WP/opd-service.war egen@116.68.206.152:$WS/
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 chown egen:egen $WS/opd-service.war
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 chmod 775 $WS/opd-service.war'''
+    		    }
+    	    }
+        }
+	}
+}

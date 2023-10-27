@@ -1,5 +1,5 @@
+# <u>Node Role</u>
 
-   #  <u>Node Role</u>
     The label applied to control-plane nodes "node-role.kubernetes.io/master" is now deprecated and will be removed in a future release after a GA deprecation period.
     Introduce a new label "node-role.kubernetes.io/control-plane" that will be applied in parallel to "node-role.kubernetes.io/master" until the removal of the "node-role.kubernetes.io/master" label.
 
@@ -11,9 +11,8 @@ I think also important is this:
     Apply toleration for a new, future taint "node-role.kubernetes.io/control-plane:NoSchedule" to the kubeadm CoreDNS / kube-dns managed manifests. Note that this taint is not yet applied to kubeadm control-plane nodes.
     Please adapt your workloads to tolerate the same future taint preemptively.
 
-
-
 **node-role.kubernetes.io/control-plane**
+
 ```
 Type: Label
 
@@ -25,6 +24,7 @@ You can label control plane nodes with this label to make it easier to schedule 
 ```
 
 **node-role.kubernetes.io/control-plane**
+
 ```
 Type: Taint
 
@@ -35,23 +35,33 @@ Used on: Node
 Taint that kubeadm applies on control plane nodes to restrict placing Pods and allow only specific pods to schedule on them.
 
 ```
+
 - If this Taint is applied, control plane nodes allow only critical workloads to be scheduled onto them. You can manually remove this taint with the following command on a specific node.
+
 ```sh
 kubectl taint nodes <node-name> node-role.kubernetes.io/control-plane:NoSchedule-
 ```
+
 - List all node
+
 ```sh
-kubectl get nodes 
+kubectl get nodes
 ```
+
 - Add role:
+
 ```sh
 kubectl label node <node name> node-role.kubernetes.io/<role name>=
 ```
+
 - Remove role:
+
 ```sh
 kubectl label node <node name> node-role.kubernetes.io/<role name>-
 ```
+
 **example:**
+
 ```sh
 kubectl label nodes worker-2.example.com node-role.kubernetes.io/worker=
 kubectl label node worker-2.example.com node-role.kubernetes.io/worker-

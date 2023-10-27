@@ -1,0 +1,47 @@
+pipeline {
+	agent any
+	environment { 
+			PATH="/opt/maven/bin:$PATH"
+			NAME = "registration-web"
+			WORKSPACE= "/home/jenkins/workspace/registration-service-test"
+			WP="/home/jenkins/workspace/registration-service-test/registration-web/target"
+			}
+	
+	stages {
+		stage('Git Pull') {
+		    steps {
+			    git branch: 'test', credentialsId: 'Git_User_Jenkins', url: 'https://gitlab.com/egen2021/registration-service.git'
+		    }
+		}
+	    stage('Build Project') {
+			steps {
+				sh 'cd $WORKSPACE && mvn -f ./pom.xml clean install -Ptest -pl registration-web -am'
+				sh 'cd $WP && mv registration-web-1.0.war hsms-registration-service.war'
+			}
+		}
+        stage('Get ssh Access') {
+            environment { 
+		        WS= "/opt/tomcat9/webapps"
+	        }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 rm -fr $WS/hsms-registration-service $WS/hsms-registration-service.war'''
+    		    }
+    	    }
+        }
+    
+        stage('Deploy app') {
+            environment { 
+    		    WS= "/opt/tomcat9/webapps"
+    	    }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''scp -o StrictHostKeyChecking=no -P 2252 $WP/hsms-registration-service.war egen@116.68.206.152:$WS/
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 chown egen:egen $WS/hsms-registration-service.war
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 chmod 775 $WS/hsms-registration-service.war
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 /opt/tomcat9/bin/startup.sh'''
+    		    }
+    	    }
+        }
+	}
+}

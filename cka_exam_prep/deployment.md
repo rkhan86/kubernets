@@ -1,16 +1,23 @@
-# Creating a Deployment
+# [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
+
+## Creating a Deployment
+
 - Create a NameSpace
+
 ```sh
 ks create ns rzk
 ```
-- Create a deployment 
+
+- Create a deployment
+
 ```sh
-ks create deployment dep1 -n rzk --replicas 3  --image nginx 
+ks create deployment dep1 -n rzk --replicas 3  --image nginx
 ```
 
 ```sh
 vim depdemo.yaml
 ```
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -30,23 +37,28 @@ spec:
         - name: nginx
           image: nginx:latest
 ```
+
 ```sh
 ks apply -f depdemo.yaml
-ks get deployments.apps -n rzk 
-ks get replicasets.apps -n rzk 
+ks get deployments.apps -n rzk
+ks get replicasets.apps -n rzk
 ks get pods -n rzk
-ks scale -n rzk --replicas=5 deployment/demo-deployment 
+ks scale -n rzk --replicas=5 deployment/demo-deployment #scal up
 ks get pods -n rzk
-ks scale -n rzk --replicas=3 deployment/demo-deployment 
+ks scale -n rzk --replicas=3 deployment/demo-deployment #scal down
 ks get pods -n rzk
 ```
-- To create a deployment yaml 
+
+- To create a deployment from yaml file
+
 ```sh
 ks create deployment dep1 -n rzk --replicas 3  --image nginx --dry-run=client -o yaml
 ```
-- To deleate a Deployment 
+
+- To deleate a Deployment
+
 ```sh
-ks delete -n rzk deployments.apps demo-deployment dep1 
+ks delete -n rzk deployments.apps demo-deployment dep1
 ```
 
 ## An sample yaml for Deployment
@@ -55,10 +67,10 @@ ks delete -n rzk deployments.apps demo-deployment dep1
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name:  MYAPP
+  name: MYAPP
   namespace: default
   labels:
-    app:  MYAPP
+    app: MYAPP
 spec:
   selector:
     matchLabels:
@@ -72,53 +84,53 @@ spec:
   template:
     metadata:
       labels:
-        app:  MYAPP
+        app: MYAPP
     spec:
       # initContainers:
-        # Init containers are exactly like regular containers, except:
-          # - Init containers always run to completion.
-          # - Each init container must complete successfully before the next one starts.
+      # Init containers are exactly like regular containers, except:
+      # - Init containers always run to completion.
+      # - Each init container must complete successfully before the next one starts.
       containers:
-      - name:  MYAPP
-        image:  MYAPP:latest
-        imagePullPolicy: Always
-        resources:
-          requests:
-            cpu: 100m
-            memory: 100Mi
-          limits:
-            cpu: 100m
-            memory: 100Mi
-        livenessProbe:
-          tcpSocket:
-            port: 80
-          initialDelaySeconds: 5
-          timeoutSeconds: 5
-          successThreshold: 1
-          failureThreshold: 3
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /_status/healthz
-            port: 80
-          initialDelaySeconds: 5
-          timeoutSeconds: 2
-          successThreshold: 1
-          failureThreshold: 3
-          periodSeconds: 10
-        env:
-        - name: DB_HOST
-          valueFrom:
-            configMapKeyRef:
+        - name: MYAPP
+          image: MYAPP:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+              cpu: 100m
+              memory: 100Mi
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /_status/healthz
+              port: 80
+            initialDelaySeconds: 5
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 3
+            periodSeconds: 10
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: MYAPP
+                  key: DB_HOST
+          ports:
+            - containerPort: 80
               name: MYAPP
-              key: DB_HOST
-        ports:
-        - containerPort:  80
-          name:  MYAPP
-          protocol: tcp
-        volumeMounts:
-        - name: localtime
-          mountPath: /etc/localtime
+              protocol: tcp
+          volumeMounts:
+            - name: localtime
+              mountPath: /etc/localtime
       volumes:
         - name: localtime
           hostPath:
@@ -127,8 +139,10 @@ spec:
 ```
 
 ## Updating a Deployment
+
 - **Note:** A Deployment's rollout is triggered if and only if the Deployment's Pod template (that is, .spec.template) is changed, for example if the labels or container images of the template are updated. Other updates, such as scaling the Deployment, do not trigger a rollout.
 - Deployment also ensures that only a certain number of Pods are created above the desired number of Pods. By default, it ensures that at most 125% of the desired number of Pods are up (25% max surge).
+
 ```yaml
 selector:
     matchLabels:
@@ -140,25 +154,31 @@ selector:
       maxUnavailable: 25%
     type: RollingUpdate
 ```
+
 - Exampl as follows
+
 ```sh
 ks create deployment dep1 -n rzk --replicas 3  --image nginx:1.14.2
 ks get deployments.apps -n rzk
 ks get pod -n rzk
 kubectl set image deployment/dep1 -n rzk nginx=nginx:1.21
 kubectl annotate deployments dep1  kubernetes.io/change-cause="set image to nginx v1.21" -n rzk
-kubectl rollout status deployment/dep1 -n rzk 
+kubectl rollout status deployment/dep1 -n rzk
 kubectl get rs
 kubectl get rs -n rzk
 kubectl get replicasets.apps -n rzk
 ```
+
 ## Checking Rollout History of a Deployment
+
 - check the revisions of this Deployment:
+
 ```sh
 kubectl rollout history deployment/dep1 -n rzk
 ```
+
 ```
-deployment.apps/dep1 
+deployment.apps/dep1
 REVISION  CHANGE-CAUSE
 1         <none>
 2         <none>
@@ -166,10 +186,13 @@ REVISION  CHANGE-CAUSE
 5         set image to nginx v1.21
 6         back to revison 3 nginx v1.25
 ```
+
 - To see the details of each revision, run:
+
 ```sh
 kubectl rollout history deployment/dep1 --revision=3 -n rzk
 ```
+
 ```
 deployment.apps/dep1 with revision #3
 Pod Template:
@@ -184,13 +207,19 @@ Pod Template:
     Mounts:	<none>
   Volumes:	<none>
 ```
+
 ## Rolling Back to a Previous Revision
+
 - Now you've decided to undo the current rollout and rollback to the previous revision:
+
 ```sh
 kubectl rollout undo deployment/nginx-deployment -n rzk
 ```
 
 - Alternatively, you can rollback to a specific revision by specifying it with --to-revision:
+
 ```sh
 kubectl rollout undo deployment/nginx-deployment --to-revision=3 -n rzk
 ```
+
+## [Well-Known Labels, Annotations and Taints](https://kubernetes.io/docs/reference/labels-annotations-taints/)

@@ -1,0 +1,32 @@
+# Pull Jenkins LTS image
+FROM  jenkins/jenkins:lts
+
+# Build the container
+USER root
+
+# Update Image and install wget
+RUN apt-get update && apt-get install -y wget
+
+# get maven 3.8.4
+RUN wget --no-verbose -O /tmp/apache-maven-3.8.4-bin.tar.gz https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.8.4/apache-maven-3.8.4-bin.tar.gz
+
+# Install maven
+RUN tar xzf /tmp/apache-maven-3.8.4-bin.tar.gz -C /opt/ 
+RUN ln -s /opt/apache-maven-3.8.4 /opt/maven  
+RUN ln -s /opt/maven/bin/mvn /usr/local/bin 
+RUN rm -f /tmp/apache-maven-3.8.4-bin.tar.gz 
+RUN chown -R jenkins:jenkins /opt/maven
+ENV MAVEN_HOME /opt/maven
+
+# Install Nodejs
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - 
+RUN apt-get install -y nodejs 
+RUN npm install -g @angular/cli@12 
+RUN apt-get clean
+# Install Angular
+ 
+
+# Remove download archive files
+#RUN  
+
+USER jenkins 

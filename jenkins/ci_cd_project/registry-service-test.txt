@@ -1,0 +1,46 @@
+pipeline {
+	agent any
+	environment { 
+			PATH="/opt/maven/bin:$PATH"
+			NAME = "registry-service"
+			WORKSPACE= "/home/jenkins/workspace/registry-service-test"
+			WP="/home/jenkins/workspace/registry_service_test/target"
+			}
+	
+	stages {
+		stage('Git Pull') {
+		    steps {
+			    git branch: 'test', credentialsId: 'Git_User_Jenkins', url: 'https://gitlab.com/egen2021/registry-service.git'
+		    }
+		}
+	    stage('Build Project') {
+			steps {
+				sh 'cd $WORKSPACE && mvn -f ./pom.xml clean install -Ptest'
+				sh 'cd target && mv registry-service-1.0.jar registry-service.jar'
+			}
+		}
+        stage('Get ssh Access') {
+            environment { 
+		         WS= "/opt/applications"
+	        }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 cp $WS/registry-service.jar $WS/backup/registry-service.jar
+    				scp -o StrictHostKeyChecking=no -P 2252 $WORKSPACE/target/registry-service.jar egen@116.68.206.152:$WS/'''
+    		    }
+    	    }
+        }
+    
+        stage('Deploy app') {
+            environment { 
+    		     WS= "/opt/applications"
+    	    }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 sudo systemctl stop registry
+    				ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 sudo systemctl start registry'''
+    		    }
+    	    }
+        }
+	}
+}

@@ -1,0 +1,47 @@
+pipeline {
+	agent any
+	environment { 
+			PATH="/opt/maven/bin:$PATH"
+			NAME = "registry-service"
+			WORKSPACE= "/home/jenkins/workspace/monitoring-service-test"
+			WP="/home/jenkins/workspace/registry_service_test/target"
+			}
+	
+	stages {
+		stage('Git Pull') {
+		    steps {
+			    git branch: 'dev', credentialsId: 'Git_User_Jenkins', url: 'https://gitlab.com/egen2021/monitoring-service.git'
+		    }
+		}
+	    stage('Build Project') {
+			steps {
+				sh 'cd $WORKSPACE && mvn -f ./pom.xml clean install -Ptest'
+				sh 'cd target && mv monitoring-service-1.0.jar monitoring-service.jar'
+			}
+		}
+        stage('Move to server') {
+            environment { 
+		        WS= "/opt/applications"
+	        }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''scp -o StrictHostKeyChecking=no -P 2252 $WORKSPACE/target/monitoring-service.jar egen@116.68.206.152:$WS/'''
+    		    }
+    	    }
+        }
+    
+        stage('Deploy app') {
+            environment { 
+    		    WS= "/opt/applications"
+    	    }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 sudo systemctl stop monitoring
+    				ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 sudo systemctl start monitoring'''
+    				
+                    
+    		    }
+    	    }
+        }
+	}
+}

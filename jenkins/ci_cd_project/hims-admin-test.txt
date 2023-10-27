@@ -1,0 +1,48 @@
+pipeline {
+	agent any
+	environment { 
+			PATH="/opt/maven/bin:$PATH"
+			NAME = "admin-web"
+			WORKSPACE= "/home/jenkins/workspace/hims-admin-test"
+			WP="/home/jenkins/workspace/hims-admin-test/admin-web/target"
+			}
+	
+	stages {
+		stage('Git Pull') {
+		    steps {
+			    git branch: 'test', credentialsId: 'Git_User_Jenkins', url: 'https://gitlab.com/egen2021/admin-service.git'
+		    }
+		}
+	    stage('Build Project') {
+			steps {
+				sh 'cd $WORKSPACE && mvn clean install -Ptest -pl admin-web -am'
+				sh 'cd $WP && mv admin-web-0.0.1-SNAPSHOT.war hims-admin-service.war'
+			}
+		}
+        stage('Get ssh Access') {
+            environment { 
+		        WS= "/opt/tomcat9/webapps"
+	        }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152  /opt/tomcat9/bin/shutdown.sh
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 rm -fr $WS/hims-admin-service $WS/hims-admin-service.war'''
+    		    }
+    	    }
+        }
+    
+        stage('Deploy app') {
+            environment { 
+    		    WS= "/opt/tomcat9/webapps"
+    	    }
+    	    steps {
+    		    sshagent(['SSH_USER_152']) {
+    				sh '''scp -o StrictHostKeyChecking=no -P 2252 $WP/hims-admin-service.war egen@116.68.206.152:$WS/
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 chown egen:egen $WS/hims-admin-service.war
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 chmod 775 $WS/hims-admin-service.war
+                    ssh -o StrictHostKeyChecking=no -p 2252 egen@116.68.206.152 /opt/tomcat9/bin/startup.sh'''
+    		    }
+    	    }
+        }
+	}
+}

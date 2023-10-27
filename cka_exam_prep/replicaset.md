@@ -1,9 +1,8 @@
-ks apply -f replicaset.yaml 
+ks apply -f replicaset.yaml
 ks get replicaset
 ks get pods
-ks describe replicasets.apps myapp 
-ks delete replicasets.apps myapp 
-
+ks describe replicasets.apps myapp
+ks delete replicasets.apps myapp
 
 ```yaml
 apiVersion: apps/v1
@@ -24,18 +23,18 @@ spec:
         app: MYAPP
     spec:
       containers:
-      - name: MYAPP
-        image: nginx/nginx
-        ports:
-        - name: web
-          containerPort:  80
-          protocol: TCP
-        env:
-        - name: NGX_VERSION
-          value: 1.16.1
-        volumeMounts:
-        - name: localtime
-          mountPath: /etc/localtime
+        - name: MYAPP
+          image: nginx/nginx
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+          env:
+            - name: NGX_VERSION
+              value: 1.16.1
+          volumeMounts:
+            - name: localtime
+              mountPath: /etc/localtime
       volumes:
         - name: localtime
           hostPath:

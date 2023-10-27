@@ -1,13 +1,15 @@
 # <u>**_Cluster Node Maintanence_**</u>
 
 **<u>Cordon</u>**
-- Kubernetes cordon is an operation that marks or taints a node in your existing node pool as unschedulable.The command prevents the Kubernetes scheduler from placing new pods onto that node, but it doesn’t affect existing pods on that node. 
+
+- Kubernetes cordon is an operation that marks or taints a node in your existing node pool as unschedulable.The command prevents the Kubernetes scheduler from placing new pods onto that node, but it doesn’t affect existing pods on that node.
 - To mark a node unschedulable, all it takes is running this command:
 
 ```sh
 kubectl cordon <node name>
 kubectl get nodes
 ```
+
 - Note that you can run pods that are part of a DaemonSet on an unschedulable Node. That’s because DaemonSets usually provide node-local services that should be running on the node, even if it’s marked as unschedulable and drained of workloads.
 
 - Once you've completed your maintenance, you can power the Node back up to reconnect it to your cluster. You must then remove the cordon you created to mark the Node as schedulable again:
@@ -16,7 +18,9 @@ kubectl get nodes
 kubectl uncordon <node name>
 kubectl get nodes
 ```
-------------------------------------
+
+---
+
 **<u>Safely Drain a Node</u>**
 
 - You can use kubectl drain to safely evict all of your pods from a node before you perform maintenance on the node (e.g. kernel upgrade, hardware maintenance, etc.). Safe evictions allow the pod's containers to gracefully terminate and will respect the PodDisruptionBudgets you have specified.
@@ -28,16 +32,19 @@ kubectl get nodes
 ```sh
 kubectl get nodes
 ```
+
 - Next, tell Kubernetes to drain the node:
 
 ```sh
 kubectl drain --ignore-daemonsets <node name>
 ```
+
 - Also you can use "**--force --grace-period 0**" option. **Not recommended**.
 
 ```sh
 kubectl drain --ignore-daemonsets <node name> --force --grace-period 0
 ```
+
 **Overriding Pod Disruption Budgets**
 
 - Pod disruption budgets are a mechanism that provide protection for your workloads. They shouldn't be overridden unless you must immediately shutdown a Node. The drain command's --disable-eviction flag provides a way to achieve this.
@@ -45,8 +52,8 @@ kubectl drain --ignore-daemonsets <node name> --force --grace-period 0
 ```sh
 kubectl drain <node name> --disable-evictio
 ```
-- This circumvents the regular Pod eviction process. Pods will be directly deleted instead, ignoring any applied disruption budgets.
 
+- This circumvents the regular Pod eviction process. Pods will be directly deleted instead, ignoring any applied disruption budgets.
 
 - Once it returns (without giving an error), you can power down the node (or equivalently, if on a cloud platform, delete the virtual machine backing the node). If you leave the node in the cluster during the maintenance operation, you need to run
 
@@ -54,39 +61,48 @@ kubectl drain <node name> --disable-evictio
 kubectl uncordon $NODENAME
 kubectl get nodes
 ```
-------------------------------------
+
+---
+
 **<u>Delete a Node from cluster</u>**
+
 - To begin working with nodes, you must first create a list of them. You may use the kubectl get nodes command to acquire a list of nodes. According to the command output, we have two nodes that are in the unknown and ready status:
 
 ```sh
 kubectl get nodes
 ```
+
 - To delete a specific node, you have drain it drain it by following above section and then use the following command is used:
 
 ```sh
 kubectl delete node <node name>
 ```
+
 - If you are using kubeadm and would like to reset the deleted Node to a state which was there before running kubeadm join then run from the node
 
 ```sh
 kubeadm reset
 ```
 
+---
 
-------------------------------------
 **<u>Join a Node to cluster</u>**
+
 - Check if you have a token – Run the command on Control node:
+
 ```sh
 kubeadm token list
 ```
+
 - Now You can also generate token and print the join command:
 
 ```sh
 kubeadm token create --print-join-command
 ```
+
 - Use the command to join the node
 
--------------------
+---
 
 ## **<u>(Optional) Configure a disruption budget</u>**
 
@@ -113,7 +129,8 @@ This is an alpha feature, which means you have to enable the PDBUnhealthyPodEvic
 - Make the change at kube-apiserver.yaml and save it.
 
 ```yaml
-...
+
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -127,50 +144,54 @@ metadata:
   namespace: kube-system
 spec:
   containers:
-  - command:
-    - kube-apiserver
-    - --advertise-address=192.168.50.131
-    - --allow-privileged=true
-    - --authorization-mode=Node,RBAC
-    - --client-ca-file=/etc/kubernetes/pki/ca.crt
-    - --enable-admission-plugins=NodeRestriction
-    - --enable-bootstrap-token-auth=true
-    - --etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt
-    - --etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt
-    - --etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key
-    - --etcd-servers=https://127.0.0.1:2379
-    - --kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt
-    - --kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key
-    - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
-    - --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt
-    - --proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key
-    - --requestheader-allowed-names=front-proxy-client
-    - --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt
-    - --requestheader-extra-headers-prefix=X-Remote-Extra-
-    - --requestheader-group-headers=X-Remote-Group
-    - --requestheader-username-headers=X-Remote-User
-    - --secure-port=6443
-    - --service-account-issuer=https://kubernetes.default.svc.cluster.local
-    - --service-account-key-file=/etc/kubernetes/pki/sa.pub
-    - --service-account-signing-key-file=/etc/kubernetes/pki/sa.key
-    - --service-cluster-ip-range=10.96.0.0/12
-    - --tls-cert-file=/etc/kubernetes/pki/apiserver.crt
-    - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
-    - --feature-gates=PDBUnhealthyPodEvictionPolicy=true  # SET THIS LINE
-    image: registry.k8s.io/kube-apiserver:v1.26.8
-    imagePullPolicy: IfNotPresent
-...
+    - command:
+        - kube-apiserver
+        - --advertise-address=192.168.50.131
+        - --allow-privileged=true
+        - --authorization-mode=Node,RBAC
+        - --client-ca-file=/etc/kubernetes/pki/ca.crt
+        - --enable-admission-plugins=NodeRestriction
+        - --enable-bootstrap-token-auth=true
+        - --etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt
+        - --etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt
+        - --etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key
+        - --etcd-servers=https://127.0.0.1:2379
+        - --kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt
+        - --kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key
+        - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+        - --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt
+        - --proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key
+        - --requestheader-allowed-names=front-proxy-client
+        - --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt
+        - --requestheader-extra-headers-prefix=X-Remote-Extra-
+        - --requestheader-group-headers=X-Remote-Group
+        - --requestheader-username-headers=X-Remote-User
+        - --secure-port=6443
+        - --service-account-issuer=https://kubernetes.default.svc.cluster.local
+        - --service-account-key-file=/etc/kubernetes/pki/sa.pub
+        - --service-account-signing-key-file=/etc/kubernetes/pki/sa.key
+        - --service-cluster-ip-range=10.96.0.0/12
+        - --tls-cert-file=/etc/kubernetes/pki/apiserver.crt
+        - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
+        - --feature-gates=PDBUnhealthyPodEvictionPolicy=true # SET THIS LINE
+      image: registry.k8s.io/kube-apiserver:v1.26.8
+      imagePullPolicy: IfNotPresent
 ```
+
 - Monitor containers with watch crictl ps or watch docker ps depending on the container runtime that the cluster uses.
 
 ```sh
 watch crictl ps
 ```
-- After successfully start the kube-apiserver container run below command to confirm it 
+
+- After successfully start the kube-apiserver container run below command to confirm it
+
 ```sh
 ps aux | grep kube-apiserver | grep PDBUnhealthyPodEvictionPolicy
 ```
+
 **Step 2: Object for Pod Disruption Budget**
+
 - Now create a policy for pod-disruption-budget, for that you can follow this [Link](https://github.com/HariSekhon/Kubernetes-configs/blob/master/pod-disruption-budget.yaml) for yaml file
 
 ```sh
@@ -179,7 +200,7 @@ vim pod-disruption-budget.yaml
 
 ```yaml
 #apiVersion: policy/v1beta1  # Kubernetes v1.5+
-apiVersion: policy/v1      # Kubernetes v1.21+
+apiVersion: policy/v1 # Kubernetes v1.21+
 kind: PodDisruptionBudget
 metadata:
   name: zk-pdb
@@ -187,18 +208,21 @@ metadata:
 spec:
   # minAvailable and maxUnavailable are mutually exclusive - both round up, so minAvailable is safer as maxUnavailable may round up and exceed your expectations
   #minAvailable: 4      # < 1.7  - must calculate yourself, eg 2/3, or 4/5
-  minAvailable: 51%     # XXX: Safer than maxUnavailable due to rounding up to more pod replicas
+  minAvailable: 51% # XXX: Safer than maxUnavailable due to rounding up to more pod replicas
   #maxUnavailable: 25%  # 1.7+ - XXX: do not set to integers, you may cause outages if replicas <= maxUnavailable, and may exceed percentages due to rounding up replicas to take down
   selector:
     matchLabels:
       app: zookeeper
   #unhealthyPodEvictionPolicy: AlwaysAllow #This field is alpha-level. The eviction API uses this field when the feature gate PDBUnhealthyPodEvictionPolicy is enabled (disabled by default).
 ```
+
 ```sh
 kubectl apply -f pod-disruption-budget.yaml
 kubectl get poddisruptionbudgets
 ```
+
 **Step 3: Run a POD**
+
 - Use the **selector** from pod-disruption-budget.yaml in your pod deployment yaml.
 
 **For more details follow the [YouTube_Link](https://www.youtube.com/watch?v=L1nCLcX5IAk)**
